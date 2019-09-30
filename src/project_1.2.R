@@ -1,22 +1,46 @@
 # install.packages("igraph")
 # install.packages("ggplot2")
+# install.packages("sna")
 library('igraph')
 library("ggplot2")
-# library('DiagrammeR')
+# library('sna')
 #read in data
+# edges1 = read.table(file = "out.subelj_jdk_jdk")
 edges1 = read.table(file = "../data/out.subelj_jdk_jdk")
-# convert to matrix:?
+
+# edges1 = read.table(out)
+# convert to matrix:
 em <-as.matrix(edges1)
 
 # extract vectors convert to dataframe: 
 relations <- as.data.frame(em)
 g<-graph.data.frame(relations,directed=TRUE)
 
+#detemine number of degrees and plot...
+# g_degrees = degree(g)
+# 
+# g_degrees_histogram <- as.data.frame(table(g_degrees))
+# 
+# g_degrees_histogram[,1] <- as.numeric(g_degrees_histogram[,1])
+# 
+# g_degrees_histogram_filt = g_degrees_histogram[g_degrees_histogram$Freq < 400,]
+# 
+# ggplot(g_degrees_histogram, aes(x = g_degrees, y = Freq)) +
+#   geom_bar() +
+#   scale_x_continuous("Degree\n(nodes with this amount of connections)",
+#                      breaks = c(1, 3, 10, 30, 100, 300),
+#                      trans = "log10") +
+#   scale_y_continuous("Frequency\n(how many of them)",
+#                      breaks = c(1, 3, 10, 30, 100, 300, 1000),
+#                      trans = "log10") +
+#   ggtitle("Degree Distribution (log-log)") +
+#   theme_bw()
+
 #simplify graph
 g_simp = simplify(g, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = igraph_opt("edge.attr.comb"))
 
-#filter graph so that only nodes with degree above 200 remain
-g_simp = igraph::delete.vertices(g_simp, igraph::degree(g_simp) < 400  )
+#filter graph so that only nodes with degree above 350 remain
+g_simp = igraph::delete.vertices(g_simp, igraph::degree(g_simp) < 200  )
 
 plot(g_simp)
 
@@ -60,60 +84,59 @@ vertex.attributes(g_simp)
 adjmatrix <- as_adjacency_matrix(g_simp)
 adjmatrix
 
-#9) communities
+
+
+# 9) adding weight to edges and vetrices
+E(g_simp)$weight <- rnorm(ecount(g_simp))
+V(g_simp)$weight <- rnorm(vcount(g_simp))
+
+g_simp[1:5,1:9]
+
+# 9cont) add to visalization
+# sg <- induced_subgraph(g_simp, g_simp$weight)
+# plot(sg, edge.label = round(E(sg)$weight,3))
+
+#communities
 wc<-walktrap.community(g_simp)
 plot(wc,g_simp, vertex.size=0.5, layout=layout.fruchterman.reingold)
 
-# 10) alpha centrality
+#alpha centrality
 ac <- alpha_centrality(g_simp)
 ac
 
 #Part 5
 #1) bfs
 res1<-bfs(g_simp,root=1,"out",order=TRUE, rank=TRUE, dist=TRUE)
-res1
 
 #2) dfs
 res2<-dfs(g_simp,root=1,"out",TRUE,TRUE,TRUE,TRUE)
-res2
 
 #3)st_cuts
 res3<-st_cuts(g_simp, source=1, target=2)
-res3
 
 #4)st_min_cuts
 res4<-st_min_cuts(g_simp, source=1, target=2)
-res4
 
 #5)is_separator
 res5<-is_separator(g_simp,c(1,2,3,4,5,6,7,8,9,10))
-res5
-
 
 #6)is_weighted
 res6<-is_weighted(g_simp)
-res6
 
-#7) finds the largest independent vertex
+#7)
 res7<-largest_ivs(g_simp)
-res7
 
-
-#8) ivs_size - finds size of independent vertex set
+#8)
 res8<-ivs_size(g_simp)
-res8
 
-#9) sample_gnp - Generate random graphs according to the G(n,p) Erdos-Renyi model
+#9
 res9<-sample_gnp(10,0.9)
-res9
-
-#10) which_mutual - Find mutual edges in a directed graph
+w
+#10
 res10<-which_mutual(g_simp)
-res10
 
-#11) which_multiple - Find the multiple or loop edges in a graph
+#11
 res11<-which_multiple(g_simp)
-res11
 
 #12
 res12<-identical_graphs(g_simp,g_simp)
@@ -137,19 +160,20 @@ res17<-delete_vertex_attr(g_simp,"weight")
 
 
 #a) how to find the central node(s) in the graph,largest degree?
-closeness(g)
+# g_simp <- delete_vertex_attr(g_simp,"weight")
+closeness(g_simp)
 #b) 
-diameter(g)
+diameter(g_simp)
 # we can use distance(g_sim) to find if there are more than one route that have the same distance as diameter(g_simp)
 
 #c)
-largest_cliques(g)
+largest_cliques(g_simp)
 #using largest_cliques can find all the cliques with most of the node. if it output multiple cliques, it means that there are multiple cliques.
 
 #d)centr_betw
 
-centr_betw(g) #find all the betweenness centrality
-ego_size(g) #find all the ego_size();
+centr_betw(g_simp) #find all the betweenness centrality
+ego_size(g_simp) #find all the ego_size();
 
 #e)
 
@@ -161,19 +185,17 @@ bon <- bonpow(g_simp, rescale=TRUE)
 bon
 which.max(bon)
 bonCol = palette(fine)[as.numeric(cut(bon,breaks = fine))]
-plot(g_simp,layout = layout.fruchterman.reingold, vertex.color=bonCol, vertex.size=bon*20, vertex.label.cex=0.6, main="Power centrality")
+plot(g_simp_noweight,layout = layout.fruchterman.reingold, vertex.color=bonCol, vertex.size=bon*20, vertex.label.cex=0.6, main="Power centrality")
 
 
 
-  
+
 g_simp_noweight <- remove.edge.attribute(g_simp, 'weight')
 bet <- betweenness(g_simp_noweight)
 bet
 which.max(bet)
 betwCol = palette(fine)[as.numeric(cut(bet,breaks = fine))]
-plot(g_simp_noweight,layout = layout.fruchterman.reingold, vertex.color=betwCol, vertex.size=bet*20, vertex.label.cex=0.6, main="Betweenness centrality")
-
-# E(g_simp)$weight
+plot(g_simp_noweight,layout = layout.fruchterman.reingold, vertex.color=betwCol, vertex.size=bet*20, vertex.label.cex=0.6, main="Betwenness centrality")
 
 
 #part7
@@ -181,15 +203,10 @@ plot(g_simp_noweight,layout = layout.fruchterman.reingold, vertex.color=betwCol,
 edges1 = read.table(file = "../data/out.subelj_jdk_jdk")
 # convert to matrix:
 em <-as.matrix(edges1)
-
-# extract vectors convert to dataframe: 
-relations <- as.data.frame(em)
+v1<-em[,1]
+v2<-em[,2]
+relations<-data.frame(from=v1,to=v2)
 g<-graph.data.frame(relations,directed=TRUE)
-
-g = simplify(g, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = igraph_opt("edge.attr.comb"))
-
-#filter graph so that only nodes with degree above 200 remain
-g = igraph::delete.vertices(g, igraph::degree(g) < 200  )
 
 delnodes=V(g)[igraph::degree(g)<9]
 del_g=igraph::delete_vertices(g,v=delnodes)
@@ -197,7 +214,6 @@ del_g=igraph::delete_vertices(g,v=delnodes)
 nb=ego(del_g, 3, nodes = V(del_g))
 nb_size=ego_size(del_g, 3, nodes = V(del_g))
 result=nb[desc_index[1:20]]
-
 desc_index=order(nb_size, decreasing = TRUE)
 print(result)
 vert=V(del_g)[desc_index[1:20]]
@@ -213,25 +229,23 @@ isEmpty <- function(x) {
 }
 
 find_common=function(result,v){
-
+  
   for(i in 1:19){
     for(j in (i+1):20){
       commons=intersect(change(result[i]),change(result[j]))
-
+      
       if(isEmpty(commons)==FALSE){
         print(v[i])
         print(v[j])
         print(commons)
         print('------------')
-
+        
       }
     }
   }
-
+  
 }
 
-
-# get_common_nbrs(graph, nodes)
 
 print("The greatest 20 neighborhoods")
 print(result)
@@ -240,5 +254,9 @@ print("neighborhoods intersections")
 find_common(result, vert)
 
 
-plot(g)
+
+
+
+
+
 
