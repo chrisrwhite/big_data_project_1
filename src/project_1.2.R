@@ -1,0 +1,233 @@
+# install.packages("igraph")
+# install.packages("ggplot2")
+library('igraph')
+library("ggplot2")
+library('sna')
+#read in data
+edges1 = read.table(file = "out.subelj_jdk_jdk")
+edges1 = read.table(out)
+# convert to matrix:
+em <-as.matrix(out)
+
+# extract vectors convert to dataframe: 
+relations <- as.data.frame(em)
+g<-graph.data.frame(relations,directed=TRUE)
+
+#detemine number of degrees and plot...
+# g_degrees = degree(g)
+# 
+# g_degrees_histogram <- as.data.frame(table(g_degrees))
+# 
+# g_degrees_histogram[,1] <- as.numeric(g_degrees_histogram[,1])
+# 
+# g_degrees_histogram_filt = g_degrees_histogram[g_degrees_histogram$Freq < 400,]
+# 
+# ggplot(g_degrees_histogram, aes(x = g_degrees, y = Freq)) +
+#   geom_bar() +
+#   scale_x_continuous("Degree\n(nodes with this amount of connections)",
+#                      breaks = c(1, 3, 10, 30, 100, 300),
+#                      trans = "log10") +
+#   scale_y_continuous("Frequency\n(how many of them)",
+#                      breaks = c(1, 3, 10, 30, 100, 300, 1000),
+#                      trans = "log10") +
+#   ggtitle("Degree Distribution (log-log)") +
+#   theme_bw()
+
+#simplify graph
+g_simp = simplify(g, remove.multiple = TRUE, remove.loops = TRUE, edge.attr.comb = igraph_opt("edge.attr.comb"))
+
+#filter graph so that only nodes with degree above 200 remain
+g_simp = igraph::delete.vertices(g_simp, igraph::degree(g_simp) < 200  )
+
+plot(g_simp)
+
+#find best layout by plotting various layouts
+layouts <- grep("^layout_", ls("package:igraph"), value=TRUE)[-1] 
+
+# Remove layouts that do not apply to our graph.
+layouts <- layouts[!grepl("bipartite|merge|norm|sugiyama|tree", layouts)]
+
+par(mfrow=c(3,3), mar=c(1,1,1,1))
+
+for (layout in layouts) {
+  print(layout)
+  l <- do.call(layout, list(g_simp)) 
+  plot(g_simp, edge.arrow.mode=0, layout=l, main=layout) }
+
+
+# part 4: graph Metrics
+# 1) density
+graph.density(g_simp, loops=TRUE) 
+
+#2) closeness centrality
+igraph::closeness(g_simp)
+
+# 3) betweenness
+igraph::betweenness(g_simp)
+
+# 4) Eigenvector Centrality
+eigen_centrality(g_simp, directed = TRUE)
+
+# 5) Page Rank
+page_rank(g_simp,  directed = TRUE)
+
+# 6) Centralizing
+centr_betw(g_simp, directed = TRUE)
+
+# 7) Vertex Attributes
+vertex.attributes(g_simp)
+
+# 8) adjacent matrix
+adjmatrix <- as_adjacency_matrix(g_simp)
+adjmatrix
+
+
+
+# 9) adding weight to edges and vetrices
+E(g_simp)$weight <- rnorm(ecount(g_simp))
+V(g_simp)$weight <- rnorm(vcount(g_simp))
+
+g_simp[1:5,1:9]
+
+# 9cont) add to visalization
+# sg <- induced_subgraph(g_simp, g_simp$weight)
+# plot(sg, edge.label = round(E(sg)$weight,3))
+
+#communities
+wc<-walktrap.community(g_simp)
+plot(wc,g_simp, vertex.size=0.5, layout=layout.fruchterman.reingold)
+
+#alpha centrality
+ac <- alpha_centrality(g_simp)
+ac
+
+#Part 5
+#1) bfs
+res1<-bfs(g_simp,root=1,"out",order=TRUE, rank=TRUE, dist=TRUE)
+
+#2) dfs
+res2<-dfs(g_simp,root=1,"out",TRUE,TRUE,TRUE,TRUE)
+
+#3)st_cuts
+res3<-st_cuts(g_simp, source=1, target=2)
+
+#4)st_min_cuts
+res4<-st_min_cuts(g_simp, source=1, target=2)
+
+#5)is_separator
+res5<-is_separator(g_simp,c(1,2,3,4,5,6,7,8,9,10))
+
+#6)is_weighted
+res6<-is_weighted(g_simp)
+
+#7)
+res7<-largest_ivs(g_simp)
+
+#8)
+res8<-ivs_size(g_simp)
+
+#9
+res9<-sample_gnp(10,0.9)
+w
+#10
+res10<-which_mutual(g_simp)
+
+#11
+res11<-which_multiple(g_simp)
+
+#12
+res12<-identical_graphs(g_simp,g_simp)
+
+#13
+res13<-incident(g_simp,1)
+
+#14
+res14<-incident_edges(g_simp,c(1,2))
+
+#15
+res15<-isomorphic(g_simp,g_simp)
+
+#16
+res16<-delete_edge_attr(g_simp, "weight")
+
+#17
+res17<-delete_vertex_attr(g_simp,"weight")
+
+######################part6
+
+
+#a) how to find the central node(s) in the graph,largest degree?
+
+#b) 
+diameter(g_simp)
+# we can use distance(g_sim) to find if there are more than one route that have the same distance as diameter(g_simp)
+
+#c)
+largest_cliques(g_simp)
+#using largest_cliques can find all the cliques with most of the node. if it output multiple cliques, it means that there are multiple cliques.
+
+#d)centr_betw
+
+centr_betw(g_simp) #find all the betweenness centrality
+ego_size(g_simp) #find all the ego_size();
+
+#e)
+
+
+#part7
+
+edges1 = read.table(out)
+# convert to matrix:
+em <-as.matrix(out)
+ver1<-em[,1]
+ver2<-em[,2]
+relations<-data.frame(from=ver1,to=ver2)
+g<-graph.data.frame(relations,directed=TRUE)
+delnodes=V(g)[igraph::degree(g)<9]
+del_g=igraph::delete_vertices(g,v=delnodes)
+
+nb=ego(del_g, 3, nodes = V(del_g))
+nb_size=ego_size(del_g, 3, nodes = V(del_g))
+result=nb[desc_index[1:20]]
+desc_index=order(nb_size, decreasing = TRUE)
+vert=V(del_g)[desc_index[1:20]]
+vert=change(vert)
+
+change=function(a){
+  return(as.numeric(names(unlist(a))))
+}
+
+isEmpty <- function(x) {
+  return(length(x)==0)
+}
+
+find_common_inter=function(result,v){
+  for(i in 1:19){
+    for(j in (i+1):20){
+      same=intersect(change(result[i]),change(result[j]))
+      
+      if(isEmpty(same)==FALSE){
+        print(v[i])
+        print(v[j])
+        print(same)
+        
+      }
+    }
+  }
+  
+}
+
+
+print("The greatest 20 neighborhoods")
+print(result)
+
+print("neighborhoods intersections")
+find_common_inter(result, vert)
+
+
+
+
+
+
+
+
